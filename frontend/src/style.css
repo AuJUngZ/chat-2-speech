@@ -1,0 +1,88 @@
+:root {
+  --font-main: "Inter", "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  /* Colors - Modern Dark Slate & Indigo */
+  --bg-app: #0f172a;
+  --bg-surface: rgba(15, 23, 42, 0.6);
+  --bg-surface-hover: rgba(30, 41, 59, 0.8);
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-hover: #4f46e5;
+  --accent: #f43f5e; /* Vibrant Rose accent */
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  
+  --border: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(99, 102, 241, 0.4);
+  
+  /* Glassmorphism */
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Spacing */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+html, body {
+    background: transparent !important;
+    color: var(--text-main);
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+}
+
+#app {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    padding: 0;
+    align-items: stretch;
+    width: 100vw;
+    height: 100vh;
+    --wails-draggable: drag;
+    overflow: hidden;
+}
+
+/* Base button reset */
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    background: none;
+    padding: 0;
+    --wails-draggable: no-drag;
+}
+
+input, select {
+    font-family: inherit;
+    --wails-draggable: no-drag;
+}
+
+.modern-card {
+    background: var(--bg-surface);
+    backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--glass-shadow);
+    transition: all var(--transition-normal);
+}
+
+.vibrant-gradient {
+    background: var(--accent-gradient);
+}
+
