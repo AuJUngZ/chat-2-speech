@@ -29,6 +29,7 @@ type cloudEngine struct {
 	skipPlayback  bool
 	voiceMetadata map[string]voiceInfo
 	fallback      Engine
+	errCallback   func(err error)
 }
 
 type PrebuiltVoiceConfig struct {
@@ -70,11 +71,18 @@ func (e *cloudEngine) Speak(ctx context.Context, text, lang string) error {
 			return ctx.Err()
 		}
 		fmt.Printf("Gemini TTS failed, falling back to OS-native: %v\n", err)
+		if e.errCallback != nil {
+			e.errCallback(err)
+		}
 		if e.fallback != nil {
 			return e.fallback.Speak(ctx, text, lang)
 		}
 	}
 	return err
+}
+
+func (e *cloudEngine) SetErrorCallback(cb func(err error)) {
+	e.errCallback = cb
 }
 
 func (e *cloudEngine) speak(ctx context.Context, text, lang string) error {
@@ -118,7 +126,10 @@ func (e *cloudEngine) speak(ctx context.Context, text, lang string) error {
 		return err
 	}
 
-	model := "gemini-3.1-flash-tts-preview"
+	model := e.cfg.GeminiModel
+	if model == "" {
+		model = "gemini-3.1-flash-tts-preview"
+	}
 	url := fmt.Sprintf("%s/v1beta/models/%s:generateContent?key=%s", e.baseURL, model, e.cfg.CloudAPIKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(jsonBody))
@@ -249,10 +260,10 @@ public class WavWriter {
 }
 
 func (e *cloudEngine) voiceNameForLang(lang string) string {
-	if lang == "th" {
-		return e.cfg.ThaiVoiceName
+	if e.cfg.GeminiVoiceName != "" {
+		return e.cfg.GeminiVoiceName
 	}
-	return e.cfg.EnglishVoiceName
+	return "Kore"
 }
 
 func (e *cloudEngine) EstimateDuration(text, lang string) float64 {

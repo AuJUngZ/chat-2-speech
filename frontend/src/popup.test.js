@@ -9,7 +9,7 @@ vi.mock('../../wailsjs/runtime', () => ({
 }));
 
 vi.mock('../wailsjs/go/main/App', () => ({
-  GetConfig: vi.fn().mockResolvedValue({}),
+  GetConfig: vi.fn(),
   SaveConfig: vi.fn().mockResolvedValue(null),
   GetVoices: vi.fn().mockResolvedValue([]),
   ResizeWindow: vi.fn().mockResolvedValue(null),
@@ -25,7 +25,10 @@ vi.mock('../wailsjs/go/main/App', () => ({
 describe('popup', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     document.body.innerHTML = '<div id="app"></div>';
+    const { GetConfig } = await import('../wailsjs/go/main/App');
+    GetConfig.mockResolvedValue({});
     const { resetModuleState } = await import('./popup.js');
     resetModuleState();
   });
@@ -157,6 +160,7 @@ describe('popup', () => {
       const toast = document.querySelector('.toast');
       expect(toast).not.toBeNull();
       vi.advanceTimersByTime(3500);
+      vi.runAllTimers();
       expect(document.querySelector('.toast')).toBeNull();
       vi.useRealTimers();
     });
@@ -168,6 +172,7 @@ describe('popup', () => {
       const toast = document.querySelector('.toast');
       expect(toast).not.toBeNull();
       vi.advanceTimersByTime(3500);
+      vi.runAllTimers();
       expect(document.querySelector('.toast')).toBeNull();
       vi.useRealTimers();
     });
@@ -189,8 +194,61 @@ describe('popup', () => {
       vi.advanceTimersByTime(3000);
       expect(toast.classList.contains('toast-out')).toBe(true);
       vi.advanceTimersByTime(600);
+      vi.runAllTimers();
       expect(document.querySelector('.toast')).toBeNull();
       vi.useRealTimers();
+    });
+  });
+
+  describe('empty state config check', () => {
+    it('sets data-check-config="true" on empty state container', async () => {
+      const { GetConfig } = await import('../wailsjs/go/main/App');
+      GetConfig.mockResolvedValueOnce({ twitchOAuthToken: 'oauth:123', twitchChannel: 'test_channel' });
+      const { resetModuleState } = await import('./popup.js');
+      resetModuleState();
+      const emptyState = document.querySelector('.empty-stack-state');
+      expect(emptyState).not.toBeNull();
+      expect(emptyState.getAttribute('data-check-config')).toBe('true');
+    });
+
+    it('shows config message when Twitch is not configured', async () => {
+      const { GetConfig } = await import('../wailsjs/go/main/App');
+      GetConfig.mockResolvedValueOnce({ twitchOAuthToken: '', twitchChannel: '' });
+      const { resetModuleState } = await import('./popup.js');
+      resetModuleState();
+      await Promise.resolve();
+      const emptyState = document.querySelector('.empty-stack-state');
+      expect(emptyState.textContent).toContain('Configure your chat connection');
+    });
+
+    it('shows waiting message when Twitch is configured', async () => {
+      const { GetConfig } = await import('../wailsjs/go/main/App');
+      GetConfig.mockResolvedValueOnce({ twitchOAuthToken: 'oauth:123', twitchChannel: 'test_channel' });
+      const { resetModuleState } = await import('./popup.js');
+      resetModuleState();
+      await Promise.resolve();
+      const emptyState = document.querySelector('.empty-stack-state');
+      expect(emptyState.textContent).toContain('Waiting for messages...');
+    });
+
+    it('rechecks config after saving settings', async () => {
+      const { GetConfig, SaveConfig, CancelSettings, EnterSettingsMode } = await import('../wailsjs/go/main/App');
+      let callCount = 0;
+      GetConfig.mockImplementation(() => {
+        callCount++;
+        if (callCount === 3) return Promise.resolve({ twitchOAuthToken: 'oauth:123', twitchChannel: 'test_channel' });
+        return Promise.resolve({});
+      });
+      SaveConfig.mockResolvedValueOnce(null);
+      CancelSettings.mockResolvedValueOnce(null);
+      EnterSettingsMode.mockResolvedValueOnce(null);
+      const { toggleSettings, checkEmptyState } = await import('./popup.js');
+      await toggleSettings();
+      const saveBtn = document.querySelector('#save-settings');
+      await saveBtn.click();
+      await checkEmptyState();
+      const emptyState = document.querySelector('.empty-stack-state');
+      expect(emptyState.textContent).toContain('Waiting for messages...');
     });
   });
 });

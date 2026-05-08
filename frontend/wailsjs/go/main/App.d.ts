@@ -38,6 +38,8 @@ export function OnSpeakFadeStart(arg1:irc.ChatMessage):Promise<void>;
 
 export function OnSpeakStart(arg1:irc.ChatMessage):Promise<void>;
 
+export function OnTTSError(arg1:irc.ChatMessage,arg2:Error):Promise<void>;
+
 export function OpenSettings():Promise<void>;
 
 export function PassMessage():Promise<void>;

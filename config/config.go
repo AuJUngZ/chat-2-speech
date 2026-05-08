@@ -13,20 +13,22 @@ type Position struct {
 }
 
 type Config struct {
-	Comment              string   `json:"_comment"`
-	AutoFadeDelay        int      `json:"autoFadeDelay"`
-	CloudTTSAPIKey       string   `json:"cloudTTSAPIKey"`
-	CloudTTSEnabled      bool     `json:"cloudTTSEnabled"`
-	EnglishVoiceName     string   `json:"englishVoiceName"`
-	MaxQueueSize         int      `json:"maxQueueSize"`
-	OverlayPosition      Position `json:"overlayPosition"`
-	PinLastMessageHotkey string   `json:"pinLastMessageHotkey"`
-	SpeechRateMultiplier float64  `json:"speechRateMultiplier"`
-	ThaiVoiceName        string   `json:"thaiVoiceName"`
-	ToggleOverlayHotkey  string   `json:"toggleOverlayHotkey"`
-	TwitchChannel        string   `json:"twitchChannel"`
-	TwitchOAuthToken     string   `json:"twitchOAuthToken"`
-	TTSEngine            string   `json:"ttsEngine"`
+	Comment               string   `json:"_comment"`
+	AutoFadeDelay         int      `json:"autoFadeDelay"`
+	CloudTTSAPIKey        string   `json:"cloudTTSAPIKey"`
+	CloudTTSEnabled       bool     `json:"cloudTTSEnabled"`
+	EnglishVoiceName      string   `json:"englishVoiceName"`
+	MaxQueueSize          int      `json:"maxQueueSize"`
+	OverlayPosition       Position `json:"overlayPosition"`
+	PinLastMessageHotkey  string   `json:"pinLastMessageHotkey"`
+	SpeechRateMultiplier  float64  `json:"speechRateMultiplier"`
+	ThaiVoiceName         string   `json:"thaiVoiceName"`
+	ToggleOverlayHotkey   string   `json:"toggleOverlayHotkey"`
+	TwitchChannel         string   `json:"twitchChannel"`
+	TwitchOAuthToken      string   `json:"twitchOAuthToken"`
+	TTSEngine             string   `json:"ttsEngine"`
+	GeminiVoiceName       string   `json:"geminiVoiceName"`
+	GeminiModel           string   `json:"geminiModel"`
 }
 
 func Default() *Config {
@@ -39,6 +41,7 @@ func Default() *Config {
 		ToggleOverlayHotkey:    "Ctrl+Shift+T",
 		PinLastMessageHotkey:   "Ctrl+Shift+P",
 		TTSEngine:             "local",
+		GeminiModel:           "gemini-3.1-flash-tts-preview",
 	}
 }
 

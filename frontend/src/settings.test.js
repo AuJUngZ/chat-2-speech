@@ -8,17 +8,18 @@ vi.mock('../wailsjs/go/main/App', () => ({
   ResizeWindow: vi.fn().mockResolvedValue(null),
   EnterSettingsMode: vi.fn().mockResolvedValue(null),
   CancelSettings: vi.fn().mockResolvedValue(null),
+  GetTTSInfo: vi.fn().mockResolvedValue({ thaiVoices: [], englishVoices: [] }),
 }));
 
 describe('settings panel', () => {
-  let GetConfig, SaveConfig, GetVoices;
+  let GetConfig, SaveConfig, GetTTSInfo;
 
   beforeEach(async () => {
     vi.clearAllMocks();
     const appMock = await import('../wailsjs/go/main/App');
     GetConfig = appMock.GetConfig;
     SaveConfig = appMock.SaveConfig;
-    GetVoices = appMock.GetVoices;
+    GetTTSInfo = appMock.GetTTSInfo;
 
     document.body.innerHTML = '<div id="app"></div>';
     const { resetModuleState } = await import('./popup.js');
@@ -36,14 +37,13 @@ describe('settings panel', () => {
       cloudTTSAPIKey: 'api-key-123',
     };
     GetConfig.mockResolvedValue(config);
-    GetVoices.mockResolvedValue(['Thai1', 'Thai2', 'Eng1', 'Eng2']);
+    GetTTSInfo.mockResolvedValue({ thaiVoices: ['Thai1', 'Thai2'], englishVoices: ['Eng1', 'Eng2'], geminiVoices: [] });
 
     const { toggleSettings } = await import('./popup.js');
     await toggleSettings();
 
     expect(GetConfig).toHaveBeenCalled();
-    expect(GetVoices).toHaveBeenCalledWith('th');
-    expect(GetVoices).toHaveBeenCalledWith('en');
+    expect(GetTTSInfo).toHaveBeenCalled();
 
     const panel = document.querySelector('.settings-panel');
     expect(panel).not.toBeNull();
@@ -60,7 +60,7 @@ describe('settings panel', () => {
       pinLastMessageHotkey: 'Ctrl+2',
     };
     GetConfig.mockResolvedValue(config);
-    GetVoices.mockResolvedValue([]);
+    GetTTSInfo.mockResolvedValue({ thaiVoices: [], englishVoices: [], geminiVoices: [] });
 
     const { toggleSettings } = await import('./popup.js');
     await toggleSettings();
@@ -85,7 +85,7 @@ describe('settings panel', () => {
 
   it('saves config when Save button is clicked', async () => {
     GetConfig.mockResolvedValue({});
-    GetVoices.mockResolvedValue([]);
+    GetTTSInfo.mockResolvedValue({ thaiVoices: [], englishVoices: [], geminiVoices: [] });
     SaveConfig.mockResolvedValue(null);
 
     const { toggleSettings } = await import('./popup.js');
@@ -102,7 +102,7 @@ describe('settings panel', () => {
 
   it('removes panel without saving when Cancel is clicked', async () => {
     GetConfig.mockResolvedValue({});
-    GetVoices.mockResolvedValue([]);
+    GetTTSInfo.mockResolvedValue({ thaiVoices: [], englishVoices: [], geminiVoices: [] });
 
     const { toggleSettings } = await import('./popup.js');
     await toggleSettings();

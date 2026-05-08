@@ -29,6 +29,8 @@ export namespace config {
 	    twitchChannel: string;
 	    twitchOAuthToken: string;
 	    ttsEngine: string;
+	    geminiVoiceName: string;
+	    geminiModel: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -50,6 +52,8 @@ export namespace config {
 	        this.twitchChannel = source["twitchChannel"];
 	        this.twitchOAuthToken = source["twitchOAuthToken"];
 	        this.ttsEngine = source["ttsEngine"];
+	        this.geminiVoiceName = source["geminiVoiceName"];
+	        this.geminiModel = source["geminiModel"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -104,6 +108,7 @@ export namespace main {
 	    engine: string;
 	    thaiVoices: string[];
 	    englishVoices: string[];
+	    geminiVoices: string[];
 	    error: string;
 	
 	    static createFrom(source: any = {}) {
@@ -115,6 +120,7 @@ export namespace main {
 	        this.engine = source["engine"];
 	        this.thaiVoices = source["thaiVoices"];
 	        this.englishVoices = source["englishVoices"];
+	        this.geminiVoices = source["geminiVoices"];
 	        this.error = source["error"];
 	    }
 	}

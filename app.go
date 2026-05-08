@@ -68,7 +68,6 @@ func (a *App) OnSpeakFadeStart(msg irc.ChatMessage) {
 func (a *App) OnQueueUpdate(messages []irc.ChatMessage) {
 	if a.ctx != nil {
 		var queueData []map[string]string
-		// Send the first 4 upcoming messages
 		limit := 4
 		if len(messages) < limit {
 			limit = len(messages)
@@ -82,6 +81,17 @@ func (a *App) OnQueueUpdate(messages []irc.ChatMessage) {
 			})
 		}
 		runtime.EventsEmit(a.ctx, "queue-updated", queueData)
+	}
+}
+
+func (a *App) OnTTSError(msg irc.ChatMessage, err error) {
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "tts-error", map[string]interface{}{
+			"username": msg.Username,
+			"message":  msg.Text,
+			"platform": msg.Platform,
+			"error":    err.Error(),
+		})
 	}
 }
 
@@ -116,11 +126,10 @@ func (a *App) startup(ctx context.Context) {
 	a.initDirectories()
 	a.setupLogger()
 
-	if a.cfg.OverlayPosition.X != 0 || a.cfg.OverlayPosition.Y != 0 {
-		// Guard against non-Wails context in tests
+	if a.ctx != nil {
 		func() {
 			defer func() { recover() }()
-			runtime.WindowSetPosition(ctx, a.cfg.OverlayPosition.X, a.cfg.OverlayPosition.Y)
+			runtime.WindowCenter(ctx)
 		}()
 	}
 
@@ -195,7 +204,7 @@ func (a *App) applyConfig(cfg *config.Config) {
 
 	// Decide what needs to be restarted
 	ircChanged := oldCfg.TwitchChannel != cfg.TwitchChannel || oldCfg.TwitchOAuthToken != cfg.TwitchOAuthToken
-	ttsChanged := oldCfg.ThaiVoiceName != cfg.ThaiVoiceName || oldCfg.EnglishVoiceName != cfg.EnglishVoiceName || oldCfg.SpeechRateMultiplier != cfg.SpeechRateMultiplier || oldCfg.TTSEngine != cfg.TTSEngine || oldCfg.CloudTTSAPIKey != cfg.CloudTTSAPIKey
+	ttsChanged := oldCfg.ThaiVoiceName != cfg.ThaiVoiceName || oldCfg.EnglishVoiceName != cfg.EnglishVoiceName || oldCfg.SpeechRateMultiplier != cfg.SpeechRateMultiplier || oldCfg.TTSEngine != cfg.TTSEngine || oldCfg.CloudTTSAPIKey != cfg.CloudTTSAPIKey || oldCfg.GeminiVoiceName != cfg.GeminiVoiceName || oldCfg.GeminiModel != cfg.GeminiModel
 	queueDestructive := oldCfg.MaxQueueSize != cfg.MaxQueueSize
 
 	if ircChanged && a.ircClient != nil && a.ircClient.client != nil {
@@ -280,15 +289,24 @@ func (a *App) initTTS() error {
 	defer a.mu.Unlock()
 	engine, err := tts.NewEngine(&tts.EngineConfig{
 		SpeechRateMultiplier: a.cfg.SpeechRateMultiplier,
-		CloudTTSEnabled:      a.cfg.TTSEngine == "cloud",
+		CloudTTSEnabled:     a.cfg.TTSEngine == "cloud",
 		CloudAPIKey:          a.cfg.CloudTTSAPIKey,
 		ThaiVoiceName:        a.cfg.ThaiVoiceName,
 		EnglishVoiceName:     a.cfg.EnglishVoiceName,
+		GeminiVoiceName:      a.cfg.GeminiVoiceName,
+		GeminiModel:          a.cfg.GeminiModel,
 	})
 	if err != nil {
 		return err
 	}
 	a.ttsEngine = engine
+	engine.SetErrorCallback(func(err error) {
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, "tts-error", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+	})
 	return nil
 }
 
@@ -539,6 +557,12 @@ func (a *App) EnterSettingsMode() {
 	a.mu.Unlock()
 
 	if a.ctx != nil {
+		x, y := runtime.WindowGetPosition(a.ctx)
+		a.mu.Lock()
+		a.cfg.OverlayPosition.X = x
+		a.cfg.OverlayPosition.Y = y
+		a.mu.Unlock()
+
 		runtime.WindowSetAlwaysOnTop(a.ctx, false)
 		runtime.WindowSetSize(a.ctx, 500, 700)
 		runtime.WindowCenter(a.ctx)
@@ -565,10 +589,13 @@ func (a *App) ExitSettingsMode() {
 		return
 	}
 	a.settingsMode = false
+	x := a.cfg.OverlayPosition.X
+	y := a.cfg.OverlayPosition.Y
 	a.mu.Unlock()
 
 	if a.ctx != nil {
 		runtime.WindowSetSize(a.ctx, 900, 350)
+		runtime.WindowSetPosition(a.ctx, x, y)
 		runtime.WindowSetAlwaysOnTop(a.ctx, true)
 		runtime.EventsEmit(a.ctx, "settings-mode-inactive", nil)
 	}
@@ -614,22 +641,19 @@ func (a *App) SaveConfig(cfg *config.Config) error {
 }
 
 type TTSInfo struct {
-	Engine       string   `json:"engine"`
-	ThaiVoices   []string `json:"thaiVoices"`
+	Engine        string   `json:"engine"`
+	ThaiVoices    []string `json:"thaiVoices"`
 	EnglishVoices []string `json:"englishVoices"`
-	Error        string   `json:"error"`
+	GeminiVoices  []string `json:"geminiVoices"`
+	Error         string   `json:"error"`
 }
 
 func (a *App) GetTTSInfo() TTSInfo {
 	a.mu.RLock()
 	engine := a.ttsEngine
-	engineType := "local"
-	if a.cfg.TTSEngine == "cloud" {
-		engineType = "cloud"
-	}
 	a.mu.RUnlock()
 
-	info := TTSInfo{Engine: engineType}
+	info := TTSInfo{}
 
 	if engine == nil {
 		info.Error = "TTS engine not initialized"
@@ -648,6 +672,11 @@ func (a *App) GetTTSInfo() TTSInfo {
 		info.Error = fmt.Sprintf("Failed to get English voices: %v", englishErr)
 	} else if englishErr == nil {
 		info.EnglishVoices = englishVoices
+	}
+
+	geminiVoices, geminiErr := engine.ListVoices("")
+	if geminiErr == nil {
+		info.GeminiVoices = geminiVoices
 	}
 
 	return info

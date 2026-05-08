@@ -1,5 +1,15 @@
-import './popup.css';
-import { GetConfig, SaveConfig, GetTTSInfo, EnterSettingsMode, CancelSettings, GetPinnedMessages, PinLastMessage, UnpinMessage, PassMessage } from '../wailsjs/go/main/App';
+import "./popup.css";
+import {
+  GetConfig,
+  SaveConfig,
+  GetTTSInfo,
+  EnterSettingsMode,
+  CancelSettings,
+  GetPinnedMessages,
+  PinLastMessage,
+  UnpinMessage,
+  PassMessage,
+} from "../wailsjs/go/main/App";
 
 let settingsVisible = false;
 let activeMessage = null;
@@ -8,44 +18,53 @@ let historyStack = [];
 let isPinned = false;
 const MAX_HISTORY = 20;
 
-export function showToast(message, type = 'info') {
-  const existingToast = document.querySelector('.toast');
+export function showToast(message, type = "info") {
+  const existingToast = document.querySelector(".toast");
   if (existingToast) existingToast.remove();
 
-  const toast = document.createElement('div');
+  const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
 
-  if (type === 'error') {
-    const retryBtn = document.createElement('button');
-    retryBtn.className = 'toast-retry-btn';
-    retryBtn.textContent = 'Retry';
+  if (type === "error") {
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "toast-retry-btn";
+    retryBtn.textContent = "Retry";
+    retryBtn.addEventListener("click", () => {
+      dismissToast(toast);
+    });
     toast.appendChild(retryBtn);
+
+    const dismissBtn = document.createElement("button");
+    dismissBtn.className = "toast-dismiss-btn";
+    dismissBtn.textContent = "✕";
+    dismissBtn.addEventListener("click", () => dismissToast(toast));
+    toast.appendChild(dismissBtn);
   }
 
-  toast.addEventListener('mouseenter', () => {
-    toast.style.animationPlayState = 'paused';
+  toast.addEventListener("mouseenter", () => {
+    toast.style.animationPlayState = "paused";
   });
-  toast.addEventListener('mouseleave', () => {
-    toast.style.animationPlayState = 'running';
+  toast.addEventListener("mouseleave", () => {
+    toast.style.animationPlayState = "running";
   });
 
   document.body.appendChild(toast);
 
-  if (type !== 'error') {
+  if (type !== "error") {
     setTimeout(() => dismissToast(toast), 3000);
   }
 }
 
 function dismissToast(toast) {
   if (!toast.parentNode) return;
-  toast.classList.add('toast-out');
+  toast.classList.add("toast-out");
   setTimeout(() => {
     if (toast.parentNode) toast.remove();
-  }, 500);
+  }, 1000);
 }
 
-const getAppElement = () => document.getElementById('app') || document.body;
+const getAppElement = () => document.getElementById("app") || document.body;
 
 export function resetModuleState() {
   settingsVisible = false;
@@ -55,26 +74,30 @@ export function resetModuleState() {
   isPinned = false;
   const app = getAppElement();
   if (app) {
-    app.innerHTML = '';
+    app.innerHTML = "";
   }
   initLayout();
 }
 
 function getPlatformIcon(platform) {
   switch (platform?.toLowerCase()) {
-    case 'twitch': return 'ri-twitch-fill';
-    case 'youtube': return 'ri-youtube-fill';
-    case 'tiktok': return 'ri-tiktok-fill';
-    default: return 'ri-chat-3-line';
+    case "twitch":
+      return "ri-twitch-fill";
+    case "youtube":
+      return "ri-youtube-fill";
+    case "tiktok":
+      return "ri-tiktok-fill";
+    default:
+      return "ri-chat-3-line";
   }
 }
 
 function initLayout() {
   const container = getAppElement();
-  if (!container || document.querySelector('.sidebar')) return;
-  
-  const sidebar = document.createElement('div');
-  sidebar.className = 'sidebar';
+  if (!container || document.querySelector(".sidebar")) return;
+
+  const sidebar = document.createElement("div");
+  sidebar.className = "sidebar";
   sidebar.innerHTML = `
     <div class="history-section">
       <div class="section-header">
@@ -86,135 +109,177 @@ function initLayout() {
   `;
   container.appendChild(sidebar);
 
-  const chatContainer = document.createElement('div');
-  chatContainer.className = 'chat-container';
+  const chatContainer = document.createElement("div");
+  chatContainer.className = "chat-container";
   chatContainer.innerHTML = '<div class="stack-container"></div>';
   container.appendChild(chatContainer);
-  
+
   renderStack();
   renderHistory();
-  
+
   if (GetPinnedMessages) {
-    GetPinnedMessages().then(msgs => {
+    GetPinnedMessages()
+      .then((msgs) => {
         if (msgs && msgs.length > 0) {
-          historyStack = msgs.map(m => ({ username: m.Username, message: m.Text, platform: m.Platform }));
+          historyStack = msgs.map((m) => ({
+            username: m.Username,
+            message: m.Text,
+            platform: m.Platform,
+          }));
           renderHistory();
         }
-      }).catch(() => {});
+      })
+      .catch(() => {});
   }
 }
 
 function createCard({ username, message, platform, isActive }, index) {
-  const card = document.createElement('div');
+  const card = document.createElement("div");
   card.className = `chat-popup stack-${index}`;
-  if (isActive && isPinned) card.classList.add('pinned');
-  
+  if (isActive && isPinned) card.classList.add("pinned");
+
   card.innerHTML = `
     <div class="popup-actions">
-      <div class="popup-badge">${isActive ? 'Speaking Now' : 'Upcoming'}</div>
-      ${isActive ? `
+      <div class="popup-badge">${isActive ? "Speaking Now" : "Upcoming"}</div>
+      ${
+        isActive
+          ? `
       <div class="popup-btn-group">
-        <button class="popup-btn popup-btn-pin ${isPinned ? 'active' : ''}">
+        <button class="popup-btn popup-btn-pin ${isPinned ? "active" : ""}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          <span>${isPinned ? 'Unpin' : 'Pin'}</span>
+          <span>${isPinned ? "Unpin" : "Pin"}</span>
         </button>
         <button class="popup-btn popup-btn-pass">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           <span>Pass</span>
         </button>
       </div>
-      ` : ''}
+      `
+          : ""
+      }
     </div>
     <div class="popup-content">
       <div class="popup-username-row">
         <div class="popup-username">${username}</div>
-        <div class="platform-badge platform-${platform || 'unknown'}">
+        <div class="platform-badge platform-${platform || "unknown"}">
           <i class="${getPlatformIcon(platform)}"></i>
-          <span>${platform || 'chat'}</span>
+          <span>${platform || "chat"}</span>
         </div>
       </div>
       <div class="popup-message">${message}</div>
     </div>
   `;
-  
+
   if (isActive) {
-    card.querySelector('.popup-btn-pin').addEventListener('click', () => {
+    card.querySelector(".popup-btn-pin").addEventListener("click", () => {
       if (PinLastMessage) PinLastMessage();
     });
-    card.querySelector('.popup-btn-pass').addEventListener('click', () => {
+    card.querySelector(".popup-btn-pass").addEventListener("click", () => {
       isPinned = false;
-      card.classList.add('fade-out');
+      card.classList.add("fade-out");
       hidePopup();
       if (PassMessage) PassMessage();
     });
   }
-  
+
   return card;
 }
 
+export async function checkEmptyState() {
+  const emptyState = document.querySelector('[data-check-config="true"]');
+  if (!emptyState) return;
+
+  const config = await GetConfig();
+  const isConfigured = config.twitchOAuthToken && config.twitchChannel;
+
+  if (!isConfigured) {
+    emptyState.innerHTML = `
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </div>
+      <div class="empty-text">No chat connections configured.</div>
+      <div class="empty-subtext">Configure your chat connection to get started.</div>
+    `;
+  } else {
+    emptyState.innerHTML = `
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </div>
+      <div class="empty-text">Waiting for messages...</div>
+      <div class="empty-subtext">New chat messages will appear here</div>
+    `;
+  }
+}
+
 export function renderStack() {
-  const container = document.querySelector('.stack-container');
+  const container = document.querySelector(".stack-container");
   if (!container) return;
-  
+
   const stack = [];
   if (activeMessage) {
     stack.push({ ...activeMessage, isActive: true });
   }
-  
+
   for (let i = 0; i < queuedMessages.length && stack.length < 5; i++) {
     const qMsg = {
       username: queuedMessages[i].username,
       message: queuedMessages[i].message,
       platform: queuedMessages[i].platform,
-      isActive: false
+      isActive: false,
     };
 
-    if (activeMessage && qMsg.username === activeMessage.username && qMsg.message === activeMessage.message) {
+    if (
+      activeMessage &&
+      qMsg.username === activeMessage.username &&
+      qMsg.message === activeMessage.message
+    ) {
       continue;
     }
     stack.push(qMsg);
   }
-  
-  container.innerHTML = '';
-  
+
+  container.innerHTML = "";
+
   if (stack.length === 0) {
-    container.classList.add('is-empty');
-    const emptyState = document.createElement('div');
-    emptyState.className = 'empty-stack-state';
+    container.classList.add("is-empty");
+    const emptyState = document.createElement("div");
+    emptyState.className = "empty-stack-state";
+    emptyState.setAttribute("data-check-config", "true");
     emptyState.innerHTML = `
       <div class="empty-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
       </div>
       <div class="empty-text">Waiting for messages...</div>
       <div class="empty-subtext">New chat messages will appear here</div>
     `;
     container.appendChild(emptyState);
+    checkEmptyState();
     return;
   }
-  
-  container.classList.remove('is-empty');
+
+  container.classList.remove("is-empty");
   const GAP = 25; // Vertical gap between stacked items
-  
+
   stack.forEach((item, index) => {
     const card = createCard(item, index);
-    
+
     // index 0 (Active) is anchored at the "top" of our stack visualization.
     // index 1+ (Upcoming) stack DOWNWARDS (+Y) and BEHIND the active one.
-    
+
     // Position active message at y=0, others offset downwards (+Y)
-    const yOffset = (index * GAP);
-    
-    const scale = 1 - (index * 0.04);
-    const opacity = 1 - (index * 0.2);
-    const brightness = 1 - (index * 0.1);
+    const yOffset = index * GAP;
+
+    const scale = 1 - index * 0.04;
+    const opacity = 1 - index * 0.2;
+    const brightness = 1 - index * 0.1;
     const zIndex = 50 - index;
 
-    card.style.setProperty('--y-offset', `${yOffset}px`);
-    card.style.setProperty('--scale', scale);
-    card.style.setProperty('--opacity', opacity);
-    card.style.setProperty('--brightness', brightness);
-    card.style.setProperty('--z-index', zIndex);
-    
+    card.style.setProperty("--y-offset", `${yOffset}px`);
+    card.style.setProperty("--scale", scale);
+    card.style.setProperty("--opacity", opacity);
+    card.style.setProperty("--brightness", brightness);
+    card.style.setProperty("--z-index", zIndex);
+
     container.appendChild(card);
   });
 }
@@ -243,7 +308,7 @@ export function addToHistory(username, message, platform) {
     const last = historyStack[historyStack.length - 1];
     if (last.username === username && last.message === message) return;
   }
-  
+
   historyStack.push({ username, message, platform });
   if (historyStack.length > MAX_HISTORY) {
     historyStack.shift();
@@ -252,9 +317,9 @@ export function addToHistory(username, message, platform) {
 }
 
 export function renderHistory() {
-  const container = document.querySelector('.history-list');
+  const container = document.querySelector(".history-list");
   if (!container) return;
-  
+
   if (historyStack.length === 0) {
     container.innerHTML = `
       <div class="empty-history-state">
@@ -263,8 +328,12 @@ export function renderHistory() {
     `;
     return;
   }
-  
-  container.innerHTML = historyStack.slice().reverse().map(m => `
+
+  container.innerHTML = historyStack
+    .slice()
+    .reverse()
+    .map(
+      (m) => `
     <div class="history-item">
       <div class="history-username-row">
         <span class="history-username">${m.username}</span>
@@ -275,7 +344,9 @@ export function renderHistory() {
       </div>
       <span class="history-message">${m.message}</span>
     </div>
-  `).join('');
+  `,
+    )
+    .join("");
 }
 
 export function setPinned(pinned) {
@@ -297,13 +368,17 @@ export function unpinCurrent() {
 }
 
 export function unpinMessage(username, message) {
-  if (activeMessage && activeMessage.username === username && activeMessage.message === message) {
+  if (
+    activeMessage &&
+    activeMessage.username === username &&
+    activeMessage.message === message
+  ) {
     unpinCurrent();
   }
 }
 
 export async function toggleSettings() {
-  const existing = document.querySelector('.settings-panel');
+  const existing = document.querySelector(".settings-panel");
   if (existing) {
     existing.remove();
     settingsVisible = false;
@@ -319,8 +394,8 @@ export async function toggleSettings() {
     config = await GetConfig();
     ttsInfo = await GetTTSInfo();
   } catch (e) {
-    console.error('Failed to load settings data:', e);
-    showToast('Failed to load settings: ' + e.message, 'error');
+    console.error("Failed to load settings data:", e);
+    showToast("Failed to load settings: " + e.message, "error");
     settingsVisible = false;
     await CancelSettings();
     return;
@@ -328,10 +403,11 @@ export async function toggleSettings() {
 
   const thaiVoices = ttsInfo.thaiVoices || [];
   const englishVoices = ttsInfo.englishVoices || [];
-  const ttsError = ttsInfo.error || '';
+  const geminiVoices = ttsInfo.geminiVoices || [];
+  const ttsError = ttsInfo.error || "";
 
-  const panel = document.createElement('div');
-  panel.className = 'settings-panel';
+  const panel = document.createElement("div");
+  panel.className = "settings-panel";
   panel.innerHTML = `
     <div class="settings-container">
       <div class="settings-header">
@@ -356,11 +432,11 @@ export async function toggleSettings() {
               </div>
               <div class="settings-field">
                 <label>OAuth Token</label>
-                <input type="password" id="twitch-token" value="${config.twitchOAuthToken || ''}" placeholder="oauth:xxxxxx" />
+                <input type="password" id="twitch-token" value="${config.twitchOAuthToken || ""}" placeholder="oauth:xxxxxx" />
               </div>
               <div class="settings-field">
                 <label>Channel Name</label>
-                <input type="text" id="twitch-channel" value="${config.twitchChannel || ''}" placeholder="my_channel" />
+                <input type="text" id="twitch-channel" value="${config.twitchChannel || ""}" placeholder="my_channel" />
               </div>
             </div>
             
@@ -377,27 +453,44 @@ export async function toggleSettings() {
 
         <div class="settings-section">
           <div class="section-label">Voice & Audio</div>
-          ${ttsError ? `<div class="tts-error">${ttsError}</div>` : ''}
+          ${ttsError ? `<div class="tts-error">${ttsError}</div>` : ""}
           <div class="settings-field">
             <label>TTS Engine</label>
             <select id="tts-engine">
-              <option value="local" ${config.ttsEngine === 'local' ? 'selected' : ''}>Local (Windows SAPI)</option>
-              <option value="cloud" ${config.ttsEngine === 'cloud' ? 'selected' : ''}>Cloud (Gemini TTS)</option>
+              <option value="local" ${config.ttsEngine === "local" ? "selected" : ""}>Local (Windows SAPI)</option>
+              <option value="cloud" ${config.ttsEngine === "cloud" ? "selected" : ""}>Cloud (Gemini TTS)</option>
             </select>
           </div>
-          <div class="grid-2">
+          <div class="settings-field" id="cloud-api-key-field" style="display: ${config.ttsEngine === "cloud" ? "block" : "none"}">
+            <label>Cloud TTS API Key <span style="color: red;">*</span></label>
+            <input type="password" id="cloud-api-key" value="${config.cloudTTSAPIKey || ""}" placeholder="Gemini API Key" />
+          </div>
+          <div class="grid-2" id="local-voice-fields">
             <div class="settings-field">
               <label>Thai Voice</label>
               <select id="thai-voice">
-                ${thaiVoices.map(v => `<option value="${v}" ${v === config.thaiVoiceName ? 'selected' : ''}>${v}</option>`).join('')}
+                ${thaiVoices.map((v) => `<option value="${v}" ${v === config.thaiVoiceName ? "selected" : ""}>${v}</option>`).join("")}
               </select>
             </div>
             <div class="settings-field">
               <label>English Voice</label>
               <select id="english-voice">
-                ${englishVoices.map(v => `<option value="${v}" ${v === config.englishVoiceName ? 'selected' : ''}>${v}</option>`).join('')}
+                ${englishVoices.map((v) => `<option value="${v}" ${v === config.englishVoiceName ? "selected" : ""}>${v}</option>`).join("")}
               </select>
             </div>
+          </div>
+          <div class="settings-field" id="cloud-voice-field" style="display: ${config.ttsEngine === "cloud" ? "block" : "none"}">
+            <label>Model</label>
+            <select id="gemini-model">
+              <option value="gemini-2.5-flash-preview-tts" ${config.geminiModel === "gemini-2.5-flash-preview-tts" ? "selected" : ""}>gemini-2.5-flash-preview-tts</option>
+              <option value="gemini-3.1-flash-tts-preview" ${!config.geminiModel || config.geminiModel === "gemini-3.1-flash-tts-preview" ? "selected" : ""}>gemini-3.1-flash-tts-preview (default)</option>
+            </select>
+          </div>
+          <div class="settings-field" id="cloud-voice-field" style="display: ${config.ttsEngine === "cloud" ? "block" : "none"}">
+            <label>Voice Type</label>
+            <select id="gemini-voice">
+              ${geminiVoices.map((v) => `<option value="${v}" ${v === config.geminiVoiceName ? "selected" : ""}>${v}</option>`).join("")}
+            </select>
           </div>
           
           <div class="settings-field">
@@ -418,10 +511,6 @@ export async function toggleSettings() {
               <input type="number" id="max-queue" value="${config.maxQueueSize}" />
             </div>
           </div>
-          
-          <div class="settings-field" id="cloud-api-key-field" style="display: ${config.ttsEngine === 'cloud' ? 'block' : 'none'}">
-            <label>Cloud TTS API Key</label>
-            <input type="password" id="cloud-api-key" value="${config.cloudTTSAPIKey || ''}" placeholder="Gemini API Key" />
           </div>
         </div>
       </div>
@@ -432,11 +521,11 @@ export async function toggleSettings() {
           <div class="hotkey-list">
             <div class="hotkey-item">
               <span class="hotkey-label">Toggle Overlay</span>
-              <span class="hotkey-value">${config.toggleOverlayHotkey || 'Not Set'}</span>
+              <span class="hotkey-value">${config.toggleOverlayHotkey || "Not Set"}</span>
             </div>
             <div class="hotkey-item">
               <span class="hotkey-label">Pin/Unpin Last Message</span>
-              <span class="hotkey-value">${config.pinLastMessageHotkey || 'Not Set'}</span>
+              <span class="hotkey-value">${config.pinLastMessageHotkey || "Not Set"}</span>
             </div>
           </div>
           <p style="font-size: 12px; color: var(--text-muted); margin: 0; padding-top: 8px;">Hotkeys are read-only here. To change them, please edit the config.json file directly.</p>
@@ -444,68 +533,122 @@ export async function toggleSettings() {
       </div>
 
       <div class="settings-actions">
-        <button id="save-settings" style="background: var(--primary); color: white;">Save Changes</button>
-        <button id="cancel-settings" style="background: rgba(255, 255, 255, 0.05); color: var(--text-main); border: 1px solid var(--border);">Cancel</button>
+        <button id="save-settings" class="btn-save">Save Changes</button>
+        <button id="cancel-settings" class="btn-cancel">Cancel</button>
       </div>
     </div>
   `;
 
-  const tabs = panel.querySelectorAll('.tab-btn');
-  const contents = panel.querySelectorAll('.tab-content');
+  const tabs = panel.querySelectorAll(".tab-btn");
+  const contents = panel.querySelectorAll(".tab-content");
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
       const target = tab.dataset.tab;
-      tabs.forEach(t => t.classList.remove('active'));
-      contents.forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      panel.querySelector(`#tab-${target}`).classList.add('active');
+      tabs.forEach((t) => t.classList.remove("active"));
+      contents.forEach((c) => c.classList.remove("active"));
+      tab.classList.add("active");
+      panel.querySelector(`#tab-${target}`).classList.add("active");
     });
   });
 
-
-  const rateInput = panel.querySelector('#speech-rate');
-  const rateLabel = panel.querySelector('#speech-rate-label');
-  rateInput.addEventListener('input', (e) => {
+  const rateInput = panel.querySelector("#speech-rate");
+  const rateLabel = panel.querySelector("#speech-rate-label");
+  rateInput.addEventListener("input", (e) => {
     rateLabel.textContent = `Speech Rate (${e.target.value}x)`;
   });
 
-  const ttsEngineSelect = panel.querySelector('#tts-engine');
-  const cloudApiKeyField = panel.querySelector('#cloud-api-key-field');
-  ttsEngineSelect.addEventListener('change', (e) => {
-    cloudApiKeyField.style.display = e.target.value === 'cloud' ? 'block' : 'none';
+  const ttsEngineSelect = panel.querySelector("#tts-engine");
+  const cloudApiKeyField = panel.querySelector("#cloud-api-key-field");
+  const localVoiceFields = panel.querySelector("#local-voice-fields");
+  const cloudVoiceField = panel.querySelector("#cloud-voice-field");
+  const thaiVoiceSelect = panel.querySelector("#thai-voice");
+  const englishVoiceSelect = panel.querySelector("#english-voice");
+  const geminiVoiceSelect = panel.querySelector("#gemini-voice");
+
+  const updateVoiceOptions = async (engineType) => {
+    const info = await GetTTSInfo();
+    const thaiVoices = info.thaiVoices || [];
+    const englishVoices = info.englishVoices || [];
+    const geminiVoices = info.geminiVoices || [];
+
+    const isCloud = engineType === "cloud";
+
+    thaiVoiceSelect.innerHTML = thaiVoices.map((v) => `<option value="${v}">${v}</option>`).join("");
+    englishVoiceSelect.innerHTML = englishVoices.map((v) => `<option value="${v}">${v}</option>`).join("");
+    geminiVoiceSelect.innerHTML = geminiVoices.map((v) => `<option value="${v}">${v}</option>`).join("");
+
+    if (isCloud) {
+      thaiVoiceSelect.value = config.thaiVoiceName || "";
+      englishVoiceSelect.value = config.englishVoiceName || "";
+      geminiVoiceSelect.value = config.geminiVoiceName || geminiVoices[0] || "";
+    } else {
+      thaiVoiceSelect.value = config.thaiVoiceName || thaiVoices[0] || "";
+      englishVoiceSelect.value = config.englishVoiceName || englishVoices[0] || "";
+      geminiVoiceSelect.value = config.geminiVoiceName || "";
+    }
+  };
+
+  ttsEngineSelect.addEventListener("change", async (e) => {
+    applyVoiceFieldVisibility(e.target.value);
+    await updateVoiceOptions(e.target.value);
   });
 
-  panel.querySelector('#save-settings').addEventListener('click', async () => {
+  await updateVoiceOptions(config.ttsEngine);
+
+  const applyVoiceFieldVisibility = (engineType) => {
+    const isCloud = engineType === "cloud";
+    cloudApiKeyField.style.display = isCloud ? "block" : "none";
+    localVoiceFields.style.display = isCloud ? "none" : "grid";
+    cloudVoiceField.style.display = isCloud ? "block" : "none";
+  };
+  applyVoiceFieldVisibility(config.ttsEngine);
+
+  panel.querySelector("#save-settings").addEventListener("click", async () => {
+    const ttsEngine = panel.querySelector("#tts-engine").value;
+    const cloudApiKey = panel.querySelector("#cloud-api-key").value;
+    if (ttsEngine === "cloud" && !cloudApiKey.trim()) {
+      showToast("Please provide Gemini API Key for Cloud TTS", "error");
+      panel.querySelector("#cloud-api-key").focus();
+      return;
+    }
+
     const newConfig = {
       ...config,
-      twitchOAuthToken: panel.querySelector('#twitch-token').value,
-      twitchChannel: panel.querySelector('#twitch-channel').value,
-      ttsEngine: panel.querySelector('#tts-engine').value,
-      thaiVoiceName: panel.querySelector('#thai-voice').value,
-      englishVoiceName: panel.querySelector('#english-voice').value,
-      speechRateMultiplier: parseFloat(panel.querySelector('#speech-rate').value),
-      autoFadeDelay: parseInt(panel.querySelector('#auto-fade').value, 10),
-      maxQueueSize: parseInt(panel.querySelector('#max-queue').value, 10),
-      cloudTTSAPIKey: panel.querySelector('#cloud-api-key').value,
+      twitchOAuthToken: panel.querySelector("#twitch-token").value,
+      twitchChannel: panel.querySelector("#twitch-channel").value,
+      ttsEngine: ttsEngine,
+      thaiVoiceName: panel.querySelector("#thai-voice").value,
+      englishVoiceName: panel.querySelector("#english-voice").value,
+      geminiVoiceName: panel.querySelector("#gemini-voice").value,
+      geminiModel: panel.querySelector("#gemini-model").value,
+      speechRateMultiplier: parseFloat(
+        panel.querySelector("#speech-rate").value,
+      ),
+      autoFadeDelay: parseInt(panel.querySelector("#auto-fade").value, 10),
+      maxQueueSize: parseInt(panel.querySelector("#max-queue").value, 10),
+      cloudTTSAPIKey: cloudApiKey,
     };
     await SaveConfig(newConfig);
     panel.remove();
     settingsVisible = false;
     await CancelSettings();
+    checkEmptyState();
   });
 
-  panel.querySelector('#cancel-settings').addEventListener('click', async () => {
-    panel.remove();
-    settingsVisible = false;
-    await CancelSettings();
-  });
+  panel
+    .querySelector("#cancel-settings")
+    .addEventListener("click", async () => {
+      panel.remove();
+      settingsVisible = false;
+      await CancelSettings();
+    });
 
   document.body.appendChild(panel);
 }
 
 export function removePopup(card) {
-  card.classList.add('fade-out');
+  card.classList.add("fade-out");
   setTimeout(() => {
     if (card.parentNode) card.remove();
   }, 300);

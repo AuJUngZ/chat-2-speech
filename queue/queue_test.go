@@ -86,6 +86,8 @@ func (e *mockEngine) ListVoices(lang string) ([]string, error) {
 	return nil, nil
 }
 
+func (e *mockEngine) SetErrorCallback(func(err error)) {}
+
 func (e *mockEngine) Spoken() []string {
 	e.mu.Lock()
 	defer e.mu.Unlock()

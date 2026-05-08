@@ -100,7 +100,13 @@ func TestSavePosition(t *testing.T) {
 	}
 
 	func TestGetConfig(t *testing.T) {
-	app := NewApp()
+	tmpDir, err := os.MkdirTemp("", "chat-alert-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	app := NewAppWithDir(tmpDir)
 	cfg := app.GetConfig()
 	if cfg == nil {
 		t.Fatal("GetConfig returned nil")

@@ -12,6 +12,7 @@ type mockTTSEngine struct{}
 func (m *mockTTSEngine) Speak(ctx context.Context, text, lang string) error { return nil }
 func (m *mockTTSEngine) EstimateDuration(text, lang string) float64 { return 0 }
 func (m *mockTTSEngine) ListVoices(lang string) ([]string, error) { return nil, nil }
+func (m *mockTTSEngine) SetErrorCallback(func(err error)) {}
 
 func TestPinLastMessagePausesQueue(t *testing.T) {
 	app := NewApp()

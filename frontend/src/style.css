@@ -86,3 +86,43 @@ input, select {
     background: var(--accent-gradient);
 }
 
+.settings-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+}
+
+.settings-actions .btn-save {
+    flex: 1;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    color: white;
+    transition: all var(--transition-fast);
+}
+
+.settings-actions .btn-save:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.settings-actions .btn-cancel {
+    flex: 1;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    transition: all var(--transition-fast);
+}
+
+.settings-actions .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+

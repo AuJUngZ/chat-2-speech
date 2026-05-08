@@ -107,6 +107,10 @@ export function initServiceEventHandlers() {
   EventsOn('service-reconnecting', (data) => {
     showToast(`Reconnecting to ${data.service} (attempt ${data.attempt}/${data.maxAttempts})`, 'info');
   });
+
+  EventsOn('tts-error', (data) => {
+    showToast(`TTS failed for ${data.username}: ${data.error}`, 'error');
+  });
 }
 
 initKeyboardShortcuts();

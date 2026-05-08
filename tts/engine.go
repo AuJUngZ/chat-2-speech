@@ -10,6 +10,8 @@ type EngineConfig struct {
 	CloudAPIKey          string
 	ThaiVoiceName        string
 	EnglishVoiceName     string
+	GeminiVoiceName      string
+	GeminiModel          string
 	cloudBaseURL         string
 }
 
@@ -17,6 +19,7 @@ type Engine interface {
 	Speak(ctx context.Context, text, lang string) error
 	EstimateDuration(text, lang string) float64
 	ListVoices(lang string) ([]string, error)
+	SetErrorCallback(func(err error))
 }
 
 type durationCalculator struct {

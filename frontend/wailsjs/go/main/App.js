@@ -70,6 +70,10 @@ export function OnSpeakStart(arg1) {
   return window['go']['main']['App']['OnSpeakStart'](arg1);
 }
 
+export function OnTTSError(arg1, arg2) {
+  return window['go']['main']['App']['OnTTSError'](arg1, arg2);
+}
+
 export function OpenSettings() {
   return window['go']['main']['App']['OpenSettings']();
 }

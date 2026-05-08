@@ -107,6 +107,8 @@ func (e *windowsEngine) ListVoices(lang string) ([]string, error) {
 	return e.filterVoicesByLang(voicesVariant.ToIDispatch(), lang)
 }
 
+func (e *windowsEngine) SetErrorCallback(cb func(err error)) {}
+
 func (e *windowsEngine) EstimateDuration(text, lang string) float64 {
 	return (&durationCalculator{
 		charsPerSec: charsPerSecForLang(lang),
